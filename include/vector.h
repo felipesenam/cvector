@@ -8,9 +8,8 @@
 #define NEW(T) (T *)malloc(sizeof(T))
 
 #define usingVector(T, _)                                                      \
-    typedef struct FROM(_, Node) FROM(_, Node);                                \
     typedef struct FROM(_, Vector) FROM(_, Vector);                            \
-    typedef struct FROM(_, Operations) FROM(_, Operations);                    \
+    typedef struct FROM(_, Node) FROM(_, Node);                                \
                                                                                \
     typedef struct FROM(_, Node)                                               \
     {                                                                          \
@@ -19,20 +18,11 @@
         T value;                                                               \
     } FROM(_, Node);                                                           \
                                                                                \
-    typedef struct FROM(_, Operations)                                         \
-    {                                                                          \
-        bool (*lt)(T obj, T obj);                                              \
-        bool (*gt)(T obj, T obj);                                              \
-    } FROM(_, Operations);                                                     \
-                                                                               \
     typedef struct FROM(_, Vector)                                             \
     {                                                                          \
         size_t size;                                                           \
         FROM(_, Node) * begin;                                                 \
         FROM(_, Node) * end;                                                   \
-                                                                               \
-        FROM(_, Operations)                                                    \
-        operations;                                                            \
                                                                                \
         FROM(_, Node) * (*seek)(const FROM(_, Vector) *, size_t index);        \
         FROM(_, Node) * (*rseek)(const FROM(_, Vector) *, size_t index);       \
@@ -43,15 +33,12 @@
         void (*emplace)(FROM(_, Vector) *, size_t index, T obj);               \
         void (*clear)(FROM(_, Vector) *);                                      \
         void (*erase)(FROM(_, Vector) *, size_t index);                        \
-        void (*delete)(T obj);                                                 \
     } FROM(_, Vector);                                                         \
                                                                                \
     FROM(_, Node) * FROM(_, seek)(const FROM(_, Vector) * self, size_t index)  \
     {                                                                          \
         if (index >= self->size)                                               \
-        {                                                                      \
             printf("ERROR: Index out of bounds.\n");                           \
-        }                                                                      \
                                                                                \
         FROM(_, Node) *current_node = self->begin;                             \
         size_t current_index = 0;                                              \
@@ -62,12 +49,11 @@
         }                                                                      \
         return current_node;                                                   \
     }                                                                          \
+                                                                               \
     FROM(_, Node) * FROM(_, rseek)(const FROM(_, Vector) * self, size_t index) \
     {                                                                          \
         if (index >= self->size)                                               \
-        {                                                                      \
             printf("ERROR: Index out of bounds.\n");                           \
-        }                                                                      \
                                                                                \
         FROM(_, Node) *current_node = self->end;                               \
         size_t current_index = 0;                                              \
@@ -78,10 +64,12 @@
         }                                                                      \
         return current_node;                                                   \
     }                                                                          \
+                                                                               \
     T *FROM(_, get)(FROM(_, Vector) * self, size_t index)                      \
     {                                                                          \
         return &self->seek(self, index)->value;                                \
     }                                                                          \
+                                                                               \
     void FROM(_, emplace_back)(FROM(_, Vector) * self, T obj)                  \
     {                                                                          \
         FROM(_, Node) *new_node = NEW(FROM(_, Node));                          \
@@ -98,6 +86,7 @@
         new_node->value = obj;                                                 \
         self->size++;                                                          \
     }                                                                          \
+                                                                               \
     void FROM(_, emplace_front)(FROM(_, Vector) * self, T obj)                 \
     {                                                                          \
         FROM(_, Node) *new_node = NEW(FROM(_, Node));                          \
@@ -114,6 +103,7 @@
         new_node->value = obj;                                                 \
         self->size++;                                                          \
     }                                                                          \
+                                                                               \
     void FROM(_, emplace)(FROM(_, Vector) * self, size_t index, T obj)         \
     {                                                                          \
         if (index == self->size)                                               \
@@ -130,67 +120,49 @@
         FROM(_, Node) *new_node = NEW(FROM(_, Node));                          \
         new_node->prev = current_node->prev;                                   \
         if (current_node->prev != NULL)                                        \
-        {                                                                      \
             current_node->prev->next = new_node;                               \
-        }                                                                      \
         current_node->prev = new_node;                                         \
         new_node->next = current_node;                                         \
         new_node->value = obj;                                                 \
         self->size++;                                                          \
     }                                                                          \
+                                                                               \
     void FROM(_, clear)(FROM(_, Vector) * self)                                \
     {                                                                          \
         FROM(_, Node) *current_node = self->begin;                             \
         while (current_node != NULL)                                           \
         {                                                                      \
             FROM(_, Node) *tmp = current_node->next;                           \
-            if (self->delete != NULL)                                          \
-            {                                                                  \
-                self->delete (current_node->value);                            \
-            }                                                                  \
             free(current_node);                                                \
             current_node = NULL;                                               \
             current_node = tmp;                                                \
         }                                                                      \
         self->size = 0;                                                        \
     }                                                                          \
+                                                                               \
     void FROM(_, erase)(FROM(_, Vector) * self, size_t index)                  \
     {                                                                          \
         FROM(_, Node) *current_node = self->seek(self, index);                 \
         if (current_node->prev != NULL)                                        \
-        {                                                                      \
             current_node->prev->next = current_node->next;                     \
-        }                                                                      \
         else                                                                   \
-        {                                                                      \
             self->begin = current_node->next;                                  \
-        }                                                                      \
                                                                                \
         if (current_node->next != NULL)                                        \
-        {                                                                      \
             current_node->next->prev = current_node->prev;                     \
-        }                                                                      \
         else                                                                   \
-        {                                                                      \
             self->end = current_node->prev;                                    \
-        }                                                                      \
-                                                                               \
-        if (self->delete != NULL)                                              \
-        {                                                                      \
-            self->delete (current_node->value);                                \
-        }                                                                      \
                                                                                \
         free(current_node);                                                    \
         self->size--;                                                          \
-    }
+    }                                                                          \
+    typedef struct FROM(_, Vector) _
 
-#define Vector(_) FROM(_, Vector)
 #define DefaultVector(_)            \
     {                               \
         0,                          \
             NULL,                   \
             NULL,                   \
-            {NULL, NULL},           \
             FROM(_, seek),          \
             FROM(_, rseek),         \
             FROM(_, get),           \
@@ -199,7 +171,6 @@
             FROM(_, emplace),       \
             FROM(_, clear),         \
             FROM(_, erase),         \
-            NULL                    \
     }
 
 #endif /* D223B251_6EF0_4076_8F96_BE23FEF52489 */

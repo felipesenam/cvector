@@ -1,56 +1,26 @@
-
-################################
-# Executable name
-FILE=prog
-# Set some value if using SDL2
-USING_SDL2=True
-
-# Main file name (where the main function is)
-MAINFILE=main
-
-# Source files extension (.c, .cpp)
-SOURCE_EXT=.c
-# Header files extension (.h, .hpp)
-HEADER_EXT=.h
-
-# Folder that contains the source files (.c, .cpp)
-SRCFOLDER=src
-# Folder that contains the header files (.h, .hpp)
-INCFOLDER=include
-# Folder that will contain the binary files (.o)
-OBJFOLDER=objects
-
-# Environment defines (separated by spaces)
-DEFINES=DEBUG
-
-# Compiler that will be used to build binaries and link the executable (gcc, g++, c++...)
-CC=gcc
-
-# Flags that will be used when compiling binaries
-COMPILATION_FLAGS=-Wall -Wextra -pedantic -g
-# Flags that will be used when linking the executable
-ifeq ($(OS),Windows_NT)
-LINKER_FLAGS=-lcomdlg32
-else
-LINKER_FLAGS=
-endif
-################################
-
-# SDL2 flags
-ifdef USING_SDL2
-ifeq ($(OS),Windows_NT)
-SDL_COMP_FLAGS=-IC:/MinGW/include/SDL2
-SDL_LINK_FLAGS=-LC:/MinGW/lib -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_mixer -lSDL2_ttf
-else
-SDL_COMP_FLAGS=-I/usr/include/SDL2
-SDL_LINK_FLAGS=-lSDL2main -lSDL2 -lSDL2_image -lSDL2_mixer -lSDL2_ttf
-endif
-endif
+include .conf
 
 ifeq ($(OS),Windows_NT)
+LINK_FLAGS:=$(LINK_FLAGS) -lcomdlg32
 TARGET_OBJFOLDER=$(OBJFOLDER)/windows
 else
 TARGET_OBJFOLDER=$(OBJFOLDER)/linux
+endif
+
+ifeq ($(SDL2), true)
+ifeq ($(OS),Windows_NT)
+COMPILATION_FLAGS:=$(COMPILATION_FLAGS) -IC:/MinGW/include/SDL2
+LINK_FLAGS:=$(LINK_FLAGS) -LC:/MinGW/lib -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_mixer -lSDL2_ttf
+else
+COMPILATION_FLAGS:=$(COMPILATION_FLAGS) -I/usr/include/SDL2
+LINK_FLAGS:=$(LINK_FLAGS) -lSDL2main -lSDL2 -lSDL2_image -lSDL2_mixer -lSDL2_ttf
+endif
+endif
+
+ifeq ($(filter debug,$(MAKECMDGOALS)),debug)
+TARGET_OBJFOLDER := $(TARGET_OBJFOLDER)/debug
+else
+TARGET_OBJFOLDER := $(TARGET_OBJFOLDER)/release
 endif
 
 SRCFILES:=$(wildcard ./$(SRCFOLDER)/*$(SOURCE_EXT)) $(wildcard ./$(SRCFOLDER)/**/*$(SOURCE_EXT))
@@ -66,7 +36,18 @@ else
 OBJCOUNT=$$(($(words $(OBJECTS))+1))
 endif
 
-#DEVELOPEMENT
+debug: all
+
+run: all
+ifeq ($(OS),Windows_NT)
+	@ echo [100%%] Built target $(FILE)
+	@ echo.
+	-@ $(FILE) || echo Process returned %ERRORLEVEL%
+else
+	@ printf "[100%%] Built target %s\n\n" "$(FILE)"
+	@ ./$(FILE) || echo Process returned $$?
+endif
+
 all: objdir $(FILE)
 ifeq ($(OS),Windows_NT)
 	@ echo [100%%] Built target $(FILE)
@@ -74,14 +55,15 @@ else
 	@ printf "[100%%] Built target %s\n" "$(FILE)"
 endif
 
+
 $(FILE): $(OBJECTS)
 ifeq ($(OS),Windows_NT)
 	@ $(eval PERCENT=$(shell echo|set /a $(CURCOUNT)*100/$(OBJCOUNT)))
 	@ if $(PERCENT) LSS 10 (echo [  $(PERCENT)%%] [92mLinking executable $(FILE)[0m) else (echo [ $(PERCENT)%%] [92mLinking executable $(FILE)[0m)
-	@ $(CC) $^ $(COMPILATION_FLAGS) $(LINKER_FLAGS) $(SDL_LINK_FLAGS) -o $(FILE) $(foreach I,./$(INCFOLDER)/,$(shell echo -I$(I)))
+	@ $(CC) $^ $(COMPILATION_FLAGS) $(OS_SPECIFIC_LINK_FLAGS) $(LINK_FLAGS) $(SDL_LINK_FLAGS) -o $(FILE) $(foreach I,./$(INCFOLDER)/,$(shell echo -I$(I)))
 else
 	@ printf "[%3i%%] \e[92mLinking executable %s\e[0m\n" "$$(($(CURCOUNT)*100/$(OBJCOUNT)))" "$(FILE)"
-	@ $(CC) $^ $(COMPILATION_FLAGS) $(LINKER_FLAGS) $(SDL_LINK_FLAGS) -o $(FILE) $(foreach I,$(INCFOLDER)/,$(shell echo -I$(I)))
+	@ $(CC) $^ $(COMPILATION_FLAGS) $(OS_SPECIFIC_LINK_FLAGS) $(LINK_FLAGS) $(SDL_LINK_FLAGS) -o $(FILE) $(foreach I,$(INCFOLDER)/,$(shell echo -I$(I)))
 endif
 
 ./$(TARGET_OBJFOLDER)/%.o: ./$(SRCFOLDER)/%$(SOURCE_EXT) ./$(INCFOLDER)/%$(HEADER_EXT)
@@ -119,7 +101,7 @@ clean:
 ifeq ($(OS),Windows_NT)
 	del /f /s /q $(foreach obj,$(subst /,\,$(OBJECTS)),"$(obj)") "$(FILE).exe" *~
 else
-	@ rm -f $(foreach obj,$(OBJECTS),"$(obj)") "$(FILE)" *~
+	rm -f $(foreach obj,$(OBJECTS),"$(obj)") "$(FILE)" *~
 endif
 
-.PHONY: all clean objdir
+.PHONY: all run clean objdir

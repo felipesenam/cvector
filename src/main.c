@@ -1,9 +1,9 @@
 #include "vector.h"
 #include <stdio.h>
 
-usingVector(int, _int);
+usingVector(int, IntVector);
 
-void printVector(Vector(_int) * vector)
+void printVector(IntVector *vector)
 {
     printf("[");
     printf("%d", *vector->get(vector, 0));
@@ -15,9 +15,7 @@ void printVector(Vector(_int) * vector)
 
 int main(/*int argc, char *argv[]*/)
 {
-    Vector(_int) vector = DefaultVector(_int);
-
-    // vector.delete = FROM(_int, delete);
+    IntVector vector = DefaultVector(IntVector);
 
     for (int i = 0; i < 25; ++i)
     {
@@ -43,8 +41,6 @@ int main(/*int argc, char *argv[]*/)
 
     vector.erase(&vector, 0);
     printVector(&vector);
-
-    printf("%d\n", vector.operations.i);
 
     vector.clear(&vector);
 
